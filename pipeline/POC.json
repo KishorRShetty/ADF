@@ -9,7 +9,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"expression": {
-						"value": "@concat(variables('A'),string(pipeline().parameters.Param))",
+						"value": "@add(pipeline().parameters.Param,variables('A'))",
 						"type": "Expression"
 					}
 				}
@@ -23,7 +23,7 @@
 		},
 		"variables": {
 			"A": {
-				"type": "String",
+				"type": "Array",
 				"defaultValue": "10"
 			}
 		},
