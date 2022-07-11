@@ -1,6 +1,20 @@
 {
 	"name": "POC",
 	"properties": {
+		"activities": [
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@concat(variables('A'),string(pipeline().parameters.Param))",
+						"type": "Expression"
+					}
+				}
+			}
+		],
 		"parameters": {
 			"Param": {
 				"type": "int",
