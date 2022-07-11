@@ -17,13 +17,13 @@
 		],
 		"parameters": {
 			"Param": {
-				"type": "int",
-				"defaultValue": 20
+				"type": "string",
+				"defaultValue": "20"
 			}
 		},
 		"variables": {
 			"A": {
-				"type": "Array",
+				"type": "String",
 				"defaultValue": "10"
 			}
 		},
