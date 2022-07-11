@@ -1,6 +1,12 @@
 {
 	"name": "POC",
 	"properties": {
+		"parameters": {
+			"Param": {
+				"type": "int",
+				"defaultValue": 20
+			}
+		},
 		"variables": {
 			"A": {
 				"type": "String",
