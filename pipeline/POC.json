@@ -1,6 +1,12 @@
 {
 	"name": "POC",
 	"properties": {
+		"variables": {
+			"A": {
+				"type": "String",
+				"defaultValue": "10"
+			}
+		},
 		"annotations": []
 	}
 }
