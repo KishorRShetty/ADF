@@ -1,0 +1,9 @@
+{
+	"name": "ADFPOCIND",
+	"location": "southeastasia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "d2ae25a4-af1c-4ebd-98ce-0e293a27f2a3",
+		"tenantId": "6d787ab7-f295-424f-b8cc-e3116a0f8520"
+	}
+}
