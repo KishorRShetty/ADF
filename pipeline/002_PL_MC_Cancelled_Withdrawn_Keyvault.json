@@ -1,0 +1,563 @@
+{
+	"name": "002_PL_MC_Cancelled_Withdrawn_Keyvault",
+	"properties": {
+		"activities": [
+			{
+				"name": "WEB_Keyvault_Get_VVPM_Baseurl",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VVPMBaseUrl?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"linkedServices": [
+						{
+							"referenceName": "KeyVaultLinkedService",
+							"type": "LinkedServiceReference"
+						}
+					],
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "WEB_Keyvault_Get_VVPM_Username",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VVPMUsername?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"linkedServices": [
+						{
+							"referenceName": "KeyVaultLinkedService",
+							"type": "LinkedServiceReference"
+						}
+					],
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "WEB_Keyvault_Get_VVPM_Password",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VVPMPassword?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"linkedServices": [
+						{
+							"referenceName": "KeyVaultLinkedService",
+							"type": "LinkedServiceReference"
+						}
+					],
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "WEB_VVPM_Auth",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "WEB_Keyvault_Get_VVPM_Password",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "WEB_Keyvault_Get_VVPM_Username",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "WEB_Keyvault_Get_VVPM_Baseurl",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(activity('WEB_Keyvault_Get_VVPM_Baseurl').output.value,'/api/v21.2/auth')",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('username=',activity('WEB_Keyvault_Get_VVPM_Username').output.value,'&password=',activity('WEB_Keyvault_Get_VVPM_Password').output.value)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "WEB_Keyvault_Emailnotification_url",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/AF-SendEmailNotification?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"linkedServices": [
+						{
+							"referenceName": "KeyVaultLinkedService",
+							"type": "LinkedServiceReference"
+						}
+					],
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "PL_003_VINCI_MC_Master_Cancelled",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "WEB_Keyvault_Emailnotification_url",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "WEB_VVPM_Auth",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "WEB_Keyvault_Archival_FolderID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "WEB_Keyvault_Cancelled_Success_TemplateID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "WEB_Keyvault_DF_EmailId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "WEB_Keyvault_Get_VINCI_MC_Baseurl",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "WEB_Keyvault_Withdrawn_Success_TemplateID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "WEB_Keyvault_NotReApproved_Success_TemplateID_copy1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "003_PL_MC_Cancelled_Withdrawn_Master",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"VVPM_BaseUrl": {
+							"value": "@activity('WEB_Keyvault_Get_VVPM_Baseurl').output.value",
+							"type": "Expression"
+						},
+						"VVPM_SessionId": {
+							"value": "@activity('WEB_VVPM_Auth').output.sessionId",
+							"type": "Expression"
+						},
+						"VINCI_MC_BaseUrl": {
+							"value": "@activity('WEB_Keyvault_Get_VINCI_MC_Baseurl').output.value",
+							"type": "Expression"
+						},
+						"VINCI_MC_Archival_Folder_ID": {
+							"value": "@activity('WEB_Keyvault_Archival_FolderID').output.value",
+							"type": "Expression"
+						},
+						"Execution_ID": {
+							"value": "@pipeline().parameters.Execution_ID",
+							"type": "Expression"
+						},
+						"Email_Notification_Url": {
+							"value": "@activity('WEB_Keyvault_Emailnotification_url').output.value",
+							"type": "Expression"
+						},
+						"Cancelled_Success_EmailTemplate_ID": {
+							"value": "@activity('WEB_Keyvault_Cancelled_Success_TemplateID').output.value",
+							"type": "Expression"
+						},
+						"DF_EmailID": {
+							"value": "@activity('WEB_Keyvault_DF_EmailId').output.value",
+							"type": "Expression"
+						},
+						"Withdrawn_Success_EmailTemplate_ID": {
+							"value": "@activity('WEB_Keyvault_Withdrawn_Success_TemplateID').output.value",
+							"type": "Expression"
+						},
+						"NotReApproved_Success_EmailTemplate_ID": {
+							"value": "@activity('WEB_Keyvault_NotReApproved_Success_TemplateID_copy1').output.value",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "WEB_Keyvault_Get_VINCI_MC_Baseurl",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VINCI-MC-BaseUrl?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"linkedServices": [
+						{
+							"referenceName": "KeyVaultLinkedService",
+							"type": "LinkedServiceReference"
+						}
+					],
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "WEB_Keyvault_Archival_FolderID",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VINCI-MC-Archival-Folder-ID?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"linkedServices": [
+						{
+							"referenceName": "KeyVaultLinkedService",
+							"type": "LinkedServiceReference"
+						}
+					],
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "SP_add_asset_log_vvpm_errorlog",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "WEB_VVPM_Auth",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[VFR].[add_asset_log]",
+					"storedProcedureParameters": {
+						"created_by": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"created_date": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"error_activity_name": {
+							"value": "VVPM Authentication Error",
+							"type": "String"
+						},
+						"error_message": {
+							"value": {
+								"value": "@activity('WEB_VVPM_Auth').output",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"error_timestamp": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"execution_id": {
+							"value": {
+								"value": "@pipeline().parameters.Execution_ID",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"source_asset_id": {
+							"value": "Error",
+							"type": "String"
+						},
+						"source_asset_name": {
+							"value": "Error",
+							"type": "String"
+						},
+						"source_asset_type": {
+							"value": "VINCI MC Email",
+							"type": "String"
+						},
+						"status": {
+							"value": "Draft - Blank Email Template - Failure",
+							"type": "String"
+						},
+						"target_asset_id": {
+							"value": "Error",
+							"type": "String"
+						},
+						"target_asset_name": {
+							"value": "Error",
+							"type": "String"
+						},
+						"target_asset_type": {
+							"value": "Error",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SqlServer1",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "WEB_Keyvault_Cancelled_Success_TemplateID",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/SendGrid-MC-Cancelled-Success-TemplateID?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"linkedServices": [
+						{
+							"referenceName": "KeyVaultLinkedService",
+							"type": "LinkedServiceReference"
+						}
+					],
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "WEB_Keyvault_DF_EmailId",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/MC-DigitalFactory-EmailID?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"linkedServices": [
+						{
+							"referenceName": "KeyVaultLinkedService",
+							"type": "LinkedServiceReference"
+						}
+					],
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "WEB_Keyvault_Withdrawn_Success_TemplateID",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/SendGrid-MC-Withdrawn-Success-TemplateID?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"linkedServices": [
+						{
+							"referenceName": "KeyVaultLinkedService",
+							"type": "LinkedServiceReference"
+						}
+					],
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "WEB_Keyvault_NotReApproved_Success_TemplateID_copy1",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/SendGrid-MC-NotApprovedforContinuedUse-Success-TemplateID?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"linkedServices": [
+						{
+							"referenceName": "KeyVaultLinkedService",
+							"type": "LinkedServiceReference"
+						}
+					],
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"Execution_ID": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "VVPM - VINCI MC Integration/5. Cancelled_Withdrawn"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-06-28T07:06:23Z"
+	}
+}

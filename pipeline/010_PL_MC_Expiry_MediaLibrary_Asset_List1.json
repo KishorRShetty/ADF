@@ -1,0 +1,159 @@
+{
+	"name": "010_PL_MC_Expiry_MediaLibrary_Asset_List1",
+	"properties": {
+		"activities": [
+			{
+				"name": "IF_Make_Available_Dams",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(1,0)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "WEB_Get_FolderId_Media_Library",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.MediaLibrary_Base_Url,'/folders')",
+									"type": "Expression"
+								},
+								"method": "POST",
+								"headers": {
+									"Authorization": {
+										"value": "@concat('Bearer ',pipeline().parameters.ML_Access_Token)",
+										"type": "Expression"
+									}
+								},
+								"body": {
+									"value": "@concat('{\"parent\":\"10494707\",\"clientfolderid\":null,\"name\":\"',pipeline().parameters.VVPM_Doc_details.data[0].name__v,'\",\"status\":\"inactive\"}')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "WEB_Get_Assets_Media_Library",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "WEB_Get_FolderId_Media_Library",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.MediaLibrary_Base_Url,'/folders/',activity('WEB_Get_FolderId_Media_Library').output.id,'/assets')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Authorization": {
+										"value": "@concat('Bearer ',pipeline().parameters.ML_Access_Token)",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "PL_Media_Library_Expire_Assets",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "WEB_Get_Assets_Media_Library",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "011_PL_MC_Expiry_MediaLibrary_ExpireAsset1",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"AssetList": {
+										"value": "@activity('WEB_Get_Assets_Media_Library').output",
+										"type": "Expression"
+									},
+									"ML_Access_Token": {
+										"value": "@pipeline().parameters.ML_Access_Token",
+										"type": "Expression"
+									},
+									"ML_Base_Url": {
+										"value": "@pipeline().parameters.MediaLibrary_Base_Url",
+										"type": "Expression"
+									},
+									"Email_Notification_Url": {
+										"value": "@pipeline().parameters.Email_Notification_Url",
+										"type": "Expression"
+									},
+									"VVPM_Doc_Details": {
+										"value": "@pipeline().parameters.VVPM_Doc_details",
+										"type": "Expression"
+									},
+									"Media_Library_Email_TemplateID": {
+										"value": "@pipeline().parameters.Media_Library_Email_TemplateID",
+										"type": "Expression"
+									},
+									"Librarian_EmailID": {
+										"value": "@pipeline().parameters.Librarian_EmailID",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"ML_Access_Token": {
+				"type": "string"
+			},
+			"MediaLibrary_Base_Url": {
+				"type": "string"
+			},
+			"VVPM_Doc_details": {
+				"type": "object"
+			},
+			"Email_Notification_Url": {
+				"type": "string"
+			},
+			"Media_Library_Email_TemplateID": {
+				"type": "string"
+			},
+			"Librarian_EmailID": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "VVPM - VINCI MC Integration/3. Expired"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-06-28T06:56:57Z"
+	}
+}

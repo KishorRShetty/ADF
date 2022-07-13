@@ -1,0 +1,595 @@
+{
+	"name": "007_PL_MC_Expiry_Folder_Creation_Master_MultipleBU1",
+	"properties": {
+		"activities": [
+			{
+				"name": "IF_MC_Email_Available",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(pipeline().parameters.VINCI_MC_Count,0)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "PL_004_Create_Country_folder_Loop",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "008_PL_MC_Expiry_Create_Folder1",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"VINCI_MC_BaseUrl": {
+										"value": "@pipeline().parameters.VINCI_MC_BaseUrl",
+										"type": "Expression"
+									},
+									"VINCI_MC_Access_Token": {
+										"value": "@pipeline().parameters.VINCI_MC_Access_Token",
+										"type": "Expression"
+									},
+									"Folder_Name": {
+										"value": "@pipeline().parameters.VVPM_Country_Name",
+										"type": "Expression"
+									},
+									"Folder_Type": "Archival - Country",
+									"Parent_Folder_ID": {
+										"value": "@pipeline().parameters.VINCI_MC_Archival_Folder_ID",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "PL_004_Create_Product_Folder_Loop",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "LK_Get_Country_Folder_ID_DB",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "008_PL_MC_Expiry_Create_Folder1",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"VINCI_MC_BaseUrl": {
+										"value": "@pipeline().parameters.VINCI_MC_BaseUrl",
+										"type": "Expression"
+									},
+									"VINCI_MC_Access_Token": {
+										"value": "@pipeline().parameters.VINCI_MC_Access_Token",
+										"type": "Expression"
+									},
+									"Folder_Name": {
+										"value": "@pipeline().parameters.VVPM_Product_Details.data[0].name__v",
+										"type": "Expression"
+									},
+									"Folder_Type": "Archival - Product",
+									"Parent_Folder_ID": {
+										"value": "@activity('LK_Get_Country_Folder_ID_DB').output.value[0].folder_id",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "LK_Get_Country_Folder_ID_DB",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "PL_004_Create_Country_folder_Loop",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderStoredProcedureName": "[VFR].[get_mc_folder_id]",
+									"storedProcedureParameters": {
+										"folder_id": {
+											"type": "String",
+											"value": null
+										},
+										"folder_name": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.VVPM_Country_Name",
+												"type": "Expression"
+											}
+										},
+										"folder_type": {
+											"type": "String",
+											"value": "Archival - Country"
+										},
+										"parent_folder_id": {
+											"type": "Int32",
+											"value": {
+												"value": "@pipeline().parameters.VINCI_MC_Archival_Folder_ID",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "SqlServerTable121",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": false
+							}
+						},
+						{
+							"name": "LK_Get_Product_Folder_ID_DB",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "PL_004_Create_Product_Folder_Loop",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderStoredProcedureName": "[VFR].[get_mc_folder_id]",
+									"storedProcedureParameters": {
+										"folder_id": {
+											"type": "String",
+											"value": null
+										},
+										"folder_name": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.VVPM_Product_Details.data[0].name__v",
+												"type": "Expression"
+											}
+										},
+										"folder_type": {
+											"type": "String",
+											"value": "Archival - Product"
+										},
+										"parent_folder_id": {
+											"type": "Int32",
+											"value": {
+												"value": "@activity('LK_Get_Country_Folder_ID_DB').output.value[0].folder_id",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "SqlServerTable121",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": false
+							}
+						},
+						{
+							"name": "SP_add_asset_log_CountryFolder_errorlog",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "PL_004_Create_Country_folder_Loop",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[VFR].[add_asset_log]",
+								"storedProcedureParameters": {
+									"created_by": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"created_date": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"error_activity_name": {
+										"value": "Country Folder Creation Error",
+										"type": "String"
+									},
+									"error_message": {
+										"value": {
+											"value": "@activity('PL_004_Create_Country_folder_Loop').output",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"error_timestamp": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"execution_id": {
+										"value": {
+											"value": "@pipeline().parameters.Execution_ID",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_asset_id": {
+										"value": {
+											"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_asset_name": {
+										"value": {
+											"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].name__v",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_asset_type": {
+										"value": "VINCI MC Email",
+										"type": "String"
+									},
+									"status": {
+										"value": "Archival - Country Folder Creation -  Failure",
+										"type": "String"
+									},
+									"target_asset_id": {
+										"value": "Error",
+										"type": "String"
+									},
+									"target_asset_name": {
+										"value": "Error",
+										"type": "String"
+									},
+									"target_asset_type": {
+										"value": "Error",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "SqlServer1",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "SP_add_asset_log_ProductFolder_errorlog",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "PL_004_Create_Product_Folder_Loop",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[VFR].[add_asset_log]",
+								"storedProcedureParameters": {
+									"created_by": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"created_date": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"error_activity_name": {
+										"value": "Product Folder Creation Error",
+										"type": "String"
+									},
+									"error_message": {
+										"value": {
+											"value": "@activity('PL_004_Create_Product_Folder_Loop').output",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"error_timestamp": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"execution_id": {
+										"value": {
+											"value": "@pipeline().parameters.Execution_ID",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_asset_id": {
+										"value": {
+											"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_asset_name": {
+										"value": {
+											"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].name__v",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_asset_type": {
+										"value": "VINCI MC Email",
+										"type": "String"
+									},
+									"status": {
+										"value": "Archival - Product Folder Creation -  Failure",
+										"type": "String"
+									},
+									"target_asset_id": {
+										"value": "Error",
+										"type": "String"
+									},
+									"target_asset_name": {
+										"value": "Error",
+										"type": "String"
+									},
+									"target_asset_type": {
+										"value": "Error",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "SqlServer1",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "PL_007_Expiry_Move_Archival_Multiple",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "LK_Get_Product_Folder_ID_DB",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "009_PL_MC_Expiry_Move_Archival1",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"VINCI_MC_BaseUrl": {
+										"value": "@pipeline().parameters.VINCI_MC_BaseUrl",
+										"type": "Expression"
+									},
+									"VINCI_MC_Access_Token": {
+										"value": "@pipeline().parameters.VINCI_MC_Access_Token",
+										"type": "Expression"
+									},
+									"VINCI_MC_Email_Details": {
+										"value": "@pipeline().parameters.VINCI_MC_Email_Details",
+										"type": "Expression"
+									},
+									"VINCI_MC_Product_Folder_ID": {
+										"value": "@activity('LK_Get_Product_Folder_ID_DB').output.value[0].folder_id",
+										"type": "Expression"
+									},
+									"VVPM_BaseUrl": {
+										"value": "@pipeline().parameters.VVPM_BaseUrl",
+										"type": "Expression"
+									},
+									"VVPM_SessionId": {
+										"value": "@pipeline().parameters.VVPM_SessionId",
+										"type": "Expression"
+									},
+									"VVPM_Doc_Details": {
+										"value": "@pipeline().parameters.VVPM_Doc_Details",
+										"type": "Expression"
+									},
+									"Execution_ID": {
+										"value": "@pipeline().parameters.Execution_ID",
+										"type": "Expression"
+									},
+									"Email_Notification_Url": {
+										"value": "@pipeline().parameters.Email_Notification_Url",
+										"type": "Expression"
+									},
+									"DF_EmailID": {
+										"value": "@pipeline().parameters.DF_EmailID",
+										"type": "Expression"
+									},
+									"Expiry_Success_EmailTemplate_ID": {
+										"value": "@pipeline().parameters.Expiry_Success_EmailTemplate_ID",
+										"type": "Expression"
+									},
+									"ML_BaseUrl": {
+										"value": "@pipeline().parameters.ML_BaseUrl",
+										"type": "Expression"
+									},
+									"ML_Access_Token": {
+										"value": "@pipeline().parameters.ML_Access_Token",
+										"type": "Expression"
+									},
+									"Media_Library_Email_TemplateID": {
+										"value": "@pipeline().parameters.Media_Library_Email_TemplateID",
+										"type": "Expression"
+									},
+									"Librarian_EmailID": {
+										"value": "@pipeline().parameters.Librarian_EmailID",
+										"type": "Expression"
+									},
+									"Customer_Key": {
+										"value": "@pipeline().parameters.Customer_Key",
+										"type": "Expression"
+									},
+									"PO_EmailID": {
+										"value": "@pipeline().parameters.PO_EmailID",
+										"type": "Expression"
+									},
+									"Emailer_Document_FolderID": {
+										"value": "@pipeline().parameters.Emailer_Document_FolderID",
+										"type": "Expression"
+									},
+									"VVPM_Country_Name": {
+										"value": "@pipeline().parameters.VVPM_Country_Name",
+										"type": "Expression"
+									},
+									"BU_Details": {
+										"value": "@pipeline().parameters.BU_Details",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"VINCI_MC_Count": {
+				"type": "int"
+			},
+			"VINCI_MC_BaseUrl": {
+				"type": "string"
+			},
+			"VINCI_MC_Access_Token": {
+				"type": "string"
+			},
+			"VVPM_Doc_Details": {
+				"type": "object"
+			},
+			"VVPM_BaseUrl": {
+				"type": "string"
+			},
+			"VVPM_SessionId": {
+				"type": "string"
+			},
+			"VINCI_MC_Email_Details": {
+				"type": "object"
+			},
+			"VINCI_MC_Archival_Folder_ID": {
+				"type": "string"
+			},
+			"Execution_ID": {
+				"type": "string"
+			},
+			"Email_Notification_Url": {
+				"type": "string"
+			},
+			"DF_EmailID": {
+				"type": "string"
+			},
+			"VVPM_Country_Name": {
+				"type": "string"
+			},
+			"Expiry_Success_EmailTemplate_ID": {
+				"type": "string"
+			},
+			"ML_Access_Token": {
+				"type": "string"
+			},
+			"ML_BaseUrl": {
+				"type": "string"
+			},
+			"Media_Library_Email_TemplateID": {
+				"type": "string"
+			},
+			"Librarian_EmailID": {
+				"type": "string"
+			},
+			"VVPM_Product_Details": {
+				"type": "object"
+			},
+			"Customer_Key": {
+				"type": "string"
+			},
+			"PO_EmailID": {
+				"type": "string"
+			},
+			"Emailer_Document_FolderID": {
+				"type": "string"
+			},
+			"BU_Details": {
+				"type": "object"
+			}
+		},
+		"variables": {
+			"processed": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"increment": {
+				"type": "String",
+				"defaultValue": "0"
+			}
+		},
+		"folder": {
+			"name": "VVPM - VINCI MC Integration/3. Expired"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-06-28T06:56:59Z"
+	}
+}

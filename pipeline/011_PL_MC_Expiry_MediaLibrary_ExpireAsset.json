@@ -1,0 +1,135 @@
+{
+	"name": "011_PL_MC_Expiry_MediaLibrary_ExpireAsset",
+	"properties": {
+		"activities": [
+			{
+				"name": "FE_AssetList",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Set_Current_Unix_Timestamp",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.AssetList.items",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "WEB_Updateasset_inactive",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.ML_Base_Url,'/assets/',item().id,'/expiration')",
+									"type": "Expression"
+								},
+								"method": "PUT",
+								"headers": {
+									"Authorization": {
+										"value": "@concat('Bearer ',pipeline().parameters.ML_Access_Token)",
+										"type": "Expression"
+									}
+								},
+								"body": {
+									"value": "@concat('{\"expire_unix_timestamp\": \"', variables('Timestamp'),'\", \"notes\": \"Set by Webdam API\",\"notify\": false}')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set_Current_Unix_Timestamp",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "Timestamp",
+					"value": {
+						"value": "@{div(sub(ticks(utcNow()), ticks('1970-01-01')),10000000)}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "WEB_Email_Notification_MediaLibrary",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "FE_AssetList",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@pipeline().parameters.Email_Notification_Url",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"body": {
+						"value": "@concat('{\"template_id\": \"',pipeline().parameters.Media_Library_Email_TemplateID,'\",\"to_email\" : \"',pipeline().parameters.Librarian_EmailID,'\",\"doc_no\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v,'\",\"doc_name\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].name__v,'\",usertype\" : \"Media Librarian\",\"country\" : \"''''\",\"location\" : \"''''\"}')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"AssetList": {
+				"type": "object"
+			},
+			"ML_Access_Token": {
+				"type": "string"
+			},
+			"ML_Base_Url": {
+				"type": "string"
+			},
+			"Email_Notification_Url": {
+				"type": "string"
+			},
+			"VVPM_Doc_Details": {
+				"type": "object"
+			},
+			"Media_Library_Email_TemplateID": {
+				"type": "string"
+			},
+			"Librarian_EmailID": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"Timestamp": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "VVPM - VINCI MC Integration/3. Expired"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-06-28T06:56:57Z"
+	}
+}

@@ -1,0 +1,335 @@
+{
+	"name": "003_PL_MC_AFD_Master",
+	"properties": {
+		"activities": [
+			{
+				"name": "WEB_VVPM_AFD_Doc",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(pipeline().parameters.VVPM_BaseUrl,'/api/v21.2/query?q=SELECT id,name__v,document_number__v,version_modified_date__v FROM documents WHERE  status__v = ''Approved for Distribution'' and published_from_uat_to_prod__c = ''false'' and type__v = ''Cross-Functional Material'' and subtype__v = ''Email'' and classification__v = ''VINCI MC Email'' ORDER BY version_modified_date__v ASC')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"headers": {
+						"Authorization": {
+							"value": "@pipeline().parameters.VVPM_SessionId",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "FE_AFDdoc",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "FE_AFDdoc_Lock",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('WEB_VVPM_AFD_Doc').output.data",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "WEB_VVPM_Doc_Details",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.VVPM_BaseUrl,'/api/v21.2/query?q=SELECT id,name__v,document_number__v, email_template_type__c,created_by__v,make_available_in_dams__c,language__c,therapeutic_area__c,expiration_date__c,country__v,product__v FROM documents WHERE  document_number__v = ''',item().document_number__v,'''')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Authorization": {
+										"value": "@pipeline().parameters.VVPM_SessionId",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "PL_004_Country_Loop_MC_AFD",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "WEB_Get_PO_EmailID_VVPM",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "004_PL_MC_AFD_Country",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"VVPM_BaseUrl": {
+										"value": "@pipeline().parameters.VVPM_BaseUrl",
+										"type": "Expression"
+									},
+									"VVPM_SessionId": {
+										"value": "@pipeline().parameters.VVPM_SessionId",
+										"type": "Expression"
+									},
+									"Execution_ID": {
+										"value": "@pipeline().parameters.Execution_ID",
+										"type": "Expression"
+									},
+									"Email_Notification_Url": {
+										"value": "@pipeline().parameters.Email_Notification_Url",
+										"type": "Expression"
+									},
+									"DF_EmailID": {
+										"value": "@pipeline().parameters.DF_EmailID",
+										"type": "Expression"
+									},
+									"VINCI_MC_BaseUrl": {
+										"value": "@pipeline().parameters.VINCI_MC_BaseUrl",
+										"type": "Expression"
+									},
+									"AFD_Success_EmailTemplate_ID": {
+										"value": "@pipeline().parameters.AFD_Success_EmailTemplate_ID",
+										"type": "Expression"
+									},
+									"VVPM_Doc_Details": {
+										"value": "@activity('WEB_VVPM_Doc_Details').output",
+										"type": "Expression"
+									},
+									"PO_EmailID": {
+										"value": "@activity('WEB_Get_PO_EmailID_VVPM').output.data[0].user_email__v",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "WEB_Get_PO_EmailID_VVPM",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "WEB_VVPM_Doc_Details",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.00:30:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.VVPM_BaseUrl,'/api/v21.2/query?q=SELECT user_email__v FROM users WHERE id = ''',activity('WEB_VVPM_Doc_Details').output.data[0].created_by__v,'''')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Authorization": {
+										"value": "@pipeline().parameters.VVPM_SessionId",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "FE_AFDdoc_Lock",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "WEB_VVPM_AFD_Doc",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('WEB_VVPM_AFD_Doc').output.data",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "WEB_lock_document_VVPM",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.VVPM_BaseUrl,'/api/v21.2/objects/documents/',item().id)",
+									"type": "Expression"
+								},
+								"method": "PUT",
+								"headers": {
+									"Authorization": {
+										"value": "@pipeline().parameters.VVPM_SessionId",
+										"type": "Expression"
+									},
+									"Content-Type": "application/x-www-form-urlencoded"
+								},
+								"body": "published_from_uat_to_prod__c=null"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "SP_MC_update_batch_log_AFD",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "FE_AFDdoc",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[VFR].[update_batch_log]",
+					"storedProcedureParameters": {
+						"errors_message": {
+							"value": null,
+							"type": "String"
+						},
+						"execution_id": {
+							"value": {
+								"value": "@pipeline().parameters.Execution_ID",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"failed_asset_count": {
+							"value": {
+								"value": "@sub(activity('WEB_VVPM_AFD_Doc').output.responseDetails.total,int(variables('processed')))",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"job_duration": {
+							"value": null,
+							"type": "TimeSpan"
+						},
+						"job_end_time": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"processed_asset_count": {
+							"value": {
+								"value": "@variables('processed')",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"total_asset_count": {
+							"value": {
+								"value": "@activity('WEB_VVPM_AFD_Doc').output.responseDetails.total",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SqlServer1",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"VVPM_BaseUrl": {
+				"type": "string"
+			},
+			"VVPM_SessionId": {
+				"type": "string"
+			},
+			"Execution_ID": {
+				"type": "string"
+			},
+			"Email_Notification_Url": {
+				"type": "string"
+			},
+			"DF_EmailID": {
+				"type": "string"
+			},
+			"VINCI_MC_BaseUrl": {
+				"type": "string"
+			},
+			"AFD_Success_EmailTemplate_ID": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"processed": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"increment": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"ML_Expiration_date": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "VVPM - VINCI MC Integration/2. Approved for Distribution"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-06-29T09:47:19Z"
+	}
+}

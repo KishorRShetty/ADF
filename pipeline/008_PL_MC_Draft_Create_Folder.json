@@ -1,0 +1,200 @@
+{
+	"name": "008_PL_MC_Draft_Create_Folder",
+	"properties": {
+		"activities": [
+			{
+				"name": "LK_Get_Folder_ID_DB",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderStoredProcedureName": "[VFR].[get_mc_folder_id]",
+						"storedProcedureParameters": {
+							"folder_id": {
+								"type": "String",
+								"value": null
+							},
+							"folder_name": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.Folder_Name",
+									"type": "Expression"
+								}
+							},
+							"folder_type": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.Folder_Type",
+									"type": "Expression"
+								}
+							},
+							"parent_folder_id": {
+								"type": "Int32",
+								"value": {
+									"value": "@pipeline().parameters.Parent_Folder_ID",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "SqlServerTable11",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "IF_Folder_Unavailable",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "LK_Get_Folder_ID_DB",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('LK_Get_Folder_ID_DB').output.value[0].folder_id,null)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "WEB_Create_Folder",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.VINCI_MC_BaseUrl,'.rest.marketingcloudapis.com/asset/v1/content/categories')",
+									"type": "Expression"
+								},
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json",
+									"Authorization": {
+										"value": "@concat('Bearer ',pipeline().parameters.VINCI_MC_Access_Token)",
+										"type": "Expression"
+									}
+								},
+								"body": {
+									"value": "@concat('{\"Name\": \"',pipeline().parameters.Folder_Name,'\",\"ParentId\": ',pipeline().parameters.Parent_Folder_ID,'}')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "SP_Add_Folder_Details_DB",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "WEB_Create_Folder",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[VFR].[add_mc_new_folder_details]",
+								"storedProcedureParameters": {
+									"created_by": {
+										"value": "Dhivya Veerasami",
+										"type": "String"
+									},
+									"folder_id": {
+										"value": {
+											"value": "@activity('WEB_Create_Folder').output.id",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"folder_name": {
+										"value": {
+											"value": "@pipeline().parameters.Folder_Name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"folder_type": {
+										"value": {
+											"value": "@pipeline().parameters.Folder_Type",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"parent_folder_id": {
+										"value": {
+											"value": "@pipeline().parameters.Parent_Folder_ID",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "SqlServer1",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"VINCI_MC_BaseUrl": {
+				"type": "string"
+			},
+			"VINCI_MC_Access_Token": {
+				"type": "string"
+			},
+			"Folder_Name": {
+				"type": "string"
+			},
+			"Folder_Type": {
+				"type": "string"
+			},
+			"Parent_Folder_ID": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"Var_Folder_ID": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "VVPM - VINCI MC Integration/1. Draft"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-06-28T06:56:57Z"
+	}
+}

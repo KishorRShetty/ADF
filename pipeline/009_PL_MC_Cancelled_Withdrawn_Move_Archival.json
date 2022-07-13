@@ -1,0 +1,729 @@
+{
+	"name": "009_PL_MC_Cancelled_Withdrawn_Move_Archival",
+	"properties": {
+		"activities": [
+			{
+				"name": "WEB_Move_Document_Folder_Archived",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(pipeline().parameters.VINCI_MC_BaseUrl,'.rest.marketingcloudapis.com/asset/v1/content/categories/',pipeline().parameters.Emailer_Document_FolderID)",
+						"type": "Expression"
+					},
+					"method": "PUT",
+					"headers": {
+						"Authorization": {
+							"value": "@concat('Bearer ',pipeline().parameters.VINCI_MC_Access_Token)",
+							"type": "Expression"
+						},
+						"Content-Type": "application/json"
+					},
+					"body": {
+						"value": "@concat('{\"id\": ',pipeline().parameters.Emailer_Document_FolderID,',\"name\": \"',pipeline().parameters.Customer_Key,'\",\"parentId\": ',pipeline().parameters.VINCI_MC_Product_Folder_ID,'}')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "WEB_Update_deactivated_VVPM",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "SW_Update_tag_by_status",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(pipeline().parameters.VVPM_BaseUrl,'/api/v21.2/objects/documents/',pipeline().parameters.VVPM_Doc_Details.data[0].Id)",
+						"type": "Expression"
+					},
+					"method": "PUT",
+					"headers": {
+						"Authorization": {
+							"value": "@pipeline().parameters.VVPM_SessionId",
+							"type": "Expression"
+						},
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": "deactivated__c=true"
+				}
+			},
+			{
+				"name": "SP_add_asset_log_Assetlog",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "IF_deactivated_updated",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[VFR].[add_asset_log]",
+					"storedProcedureParameters": {
+						"created_by": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"created_date": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"error_activity_name": {
+							"value": null,
+							"type": "String"
+						},
+						"error_message": {
+							"value": null,
+							"type": "String"
+						},
+						"error_timestamp": {
+							"value": null,
+							"type": "DateTime"
+						},
+						"execution_id": {
+							"value": {
+								"value": "@pipeline().parameters.Execution_ID",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"source_asset_id": {
+							"value": {
+								"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"source_asset_name": {
+							"value": {
+								"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].name__v",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"source_asset_type": {
+							"value": "VINCI MC Email",
+							"type": "String"
+						},
+						"status": {
+							"value": "MC Email Template Expiry - Success",
+							"type": "String"
+						},
+						"target_asset_id": {
+							"value": {
+								"value": "@pipeline().parameters.VINCI_MC_Email_Details.items[0].id",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"target_asset_name": {
+							"value": {
+								"value": "@pipeline().parameters.VINCI_MC_Email_Details.items[0].name",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"target_asset_type": {
+							"value": {
+								"value": "@concat('VINCI MC Email Message - ',pipeline().parameters.VINCI_MC_Email_Details.items[0].assetType.displayName)",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SqlServer1",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "SET_Processed_asset_count",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "SP_add_asset_log_Assetlog",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "processed",
+					"value": {
+						"value": "@string(add(int(variables('increment')),1))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SET_Increment variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "SET_Processed_asset_count",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "increment",
+					"value": {
+						"value": "@variables('processed')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SP_add_asset_log_Movefolder_errorlog",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "WEB_Move_Document_Folder_Archived",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[VFR].[add_asset_log]",
+					"storedProcedureParameters": {
+						"created_by": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"created_date": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"error_activity_name": {
+							"value": "WEB_Move_Archived",
+							"type": "String"
+						},
+						"error_message": {
+							"value": {
+								"value": "@activity('WEB_Move_Document_Folder_Archived').output",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"error_timestamp": {
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"execution_id": {
+							"value": {
+								"value": "@pipeline().parameters.Execution_ID",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"source_asset_id": {
+							"value": {
+								"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"source_asset_name": {
+							"value": {
+								"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"source_asset_type": {
+							"value": "VINCI MC Email",
+							"type": "String"
+						},
+						"status": {
+							"value": "Expiry File movement Error",
+							"type": "String"
+						},
+						"target_asset_id": {
+							"value": "Error",
+							"type": "String"
+						},
+						"target_asset_name": {
+							"value": "Error",
+							"type": "String"
+						},
+						"target_asset_type": {
+							"value": "Error",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SqlServer1",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "IF_deactivated_updated",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "WEB_Update_deactivated_VVPM",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('WEB_Update_deactivated_VVPM').output.responseStatus,'SUCCESS')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "SP_add_asset_log_deactivatedflag_errorlog",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[VFR].[add_asset_log]",
+								"storedProcedureParameters": {
+									"created_by": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"created_date": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"error_activity_name": {
+										"value": "Country Folder Creation Error",
+										"type": "String"
+									},
+									"error_message": {
+										"value": {
+											"value": "@activity('WEB_Update_deactivated_VVPM').output.errors",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"error_timestamp": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"execution_id": {
+										"value": {
+											"value": "@pipeline().parameters.Execution_ID",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_asset_id": {
+										"value": {
+											"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_asset_name": {
+										"value": {
+											"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].name__v",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_asset_type": {
+										"value": "VINCI MC Email",
+										"type": "String"
+									},
+									"status": {
+										"value": "Deactivated Flag Update Failure",
+										"type": "String"
+									},
+									"target_asset_id": {
+										"value": "Error",
+										"type": "String"
+									},
+									"target_asset_name": {
+										"value": "Error",
+										"type": "String"
+									},
+									"target_asset_type": {
+										"value": "Error",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "SqlServer1",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "PL_010_Cancelled_Email_Notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "010_PL_MC_Cancelled_Withdrawn_Email_Notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"VINCI_MC_BaseUrl": {
+										"value": "@pipeline().parameters.VINCI_MC_BaseUrl",
+										"type": "Expression"
+									},
+									"VINCI_MC_Access_Token": {
+										"value": "@pipeline().parameters.VINCI_MC_Access_Token",
+										"type": "Expression"
+									},
+									"VINCI_MC_Email_Details": {
+										"value": "@pipeline().parameters.VINCI_MC_Email_Details",
+										"type": "Expression"
+									},
+									"VINCI_MC_Product_Folder_ID": {
+										"value": "@pipeline().parameters.VINCI_MC_Product_Folder_ID",
+										"type": "Expression"
+									},
+									"VVPM_BaseUrl": {
+										"value": "@pipeline().parameters.VVPM_BaseUrl",
+										"type": "Expression"
+									},
+									"VVPM_SessionId": {
+										"value": "@pipeline().parameters.VVPM_SessionId",
+										"type": "Expression"
+									},
+									"VVPM_Doc_Details": {
+										"value": "@pipeline().parameters.VVPM_Doc_Details",
+										"type": "Expression"
+									},
+									"Execution_ID": {
+										"value": "@pipeline().parameters.Execution_ID",
+										"type": "Expression"
+									},
+									"Email_Notification_Url": {
+										"value": "@pipeline().parameters.Email_Notification_Url",
+										"type": "Expression"
+									},
+									"DF_EmailID": {
+										"value": "@pipeline().parameters.DF_EmailID",
+										"type": "Expression"
+									},
+									"Cancelled_Success_EmailTemplate_ID": {
+										"value": "@pipeline().parameters.Cancelled_Success_EmailTemplate_ID",
+										"type": "Expression"
+									},
+									"Customer_Key": {
+										"value": "@pipeline().parameters.Customer_Key",
+										"type": "Expression"
+									},
+									"PO_EmailID": {
+										"value": "@pipeline().parameters.PO_EmailID",
+										"type": "Expression"
+									},
+									"Emailer_Document_FolderID": {
+										"value": "@pipeline().parameters.Emailer_Document_FolderID",
+										"type": "Expression"
+									},
+									"VVPM_Country_Name": {
+										"value": "@pipeline().parameters.VVPM_Country_Name",
+										"type": "Expression"
+									},
+									"BU_Details": {
+										"value": "@pipeline().parameters.BU_Details",
+										"type": "Expression"
+									},
+									"NotReApproved_Success_EmailTemplate_ID": {
+										"value": "@pipeline().parameters.NotReApproved_Success_EmailTemplate_ID",
+										"type": "Expression"
+									},
+									"Withdrawn_Success_EmailTemplate_ID": {
+										"value": "@pipeline().parameters.Withdrawn_Success_EmailTemplate_ID",
+										"type": "Expression"
+									},
+									"Flag_Update_Status": {
+										"value": "@activity('WEB_Update_deactivated_VVPM').output",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "SW_Update_tag_by_status",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "WEB_Move_Document_Folder_Archived",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].status__v",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "Cancelled",
+							"activities": [
+								{
+									"name": "WEB_update_tag_Cancelled",
+									"type": "WebActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat(pipeline().parameters.VINCI_MC_BaseUrl,'.rest.marketingcloudapis.com/asset/v1/content/assets/',pipeline().parameters.VINCI_MC_Email_Details.items[0].id)",
+											"type": "Expression"
+										},
+										"method": "PATCH",
+										"headers": {
+											"Authorization": {
+												"value": "@concat('Bearer ',pipeline().parameters.VINCI_MC_Access_Token)",
+												"type": "Expression"
+											},
+											"Content-Type": "application/json"
+										},
+										"body": {
+											"value": "@concat('{\"tags\": [\"Cancelled\"]}')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "Withdrawn",
+							"activities": [
+								{
+									"name": "WEB_update_tag_Withdrawn",
+									"type": "WebActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat(pipeline().parameters.VINCI_MC_BaseUrl,'.rest.marketingcloudapis.com/asset/v1/content/assets/',pipeline().parameters.VINCI_MC_Email_Details.items[0].id)",
+											"type": "Expression"
+										},
+										"method": "PATCH",
+										"headers": {
+											"Authorization": {
+												"value": "@concat('Bearer ',pipeline().parameters.VINCI_MC_Access_Token)",
+												"type": "Expression"
+											},
+											"Content-Type": "application/json"
+										},
+										"body": {
+											"value": "@concat('{\"tags\": [\"Withdrawn\"]}')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "Not Approved for Continued Use",
+							"activities": [
+								{
+									"name": "WEB_update_tag_Not Approved for Continued Use",
+									"type": "WebActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat(pipeline().parameters.VINCI_MC_BaseUrl,'.rest.marketingcloudapis.com/asset/v1/content/assets/',pipeline().parameters.VINCI_MC_Email_Details.items[0].id)",
+											"type": "Expression"
+										},
+										"method": "PATCH",
+										"headers": {
+											"Authorization": {
+												"value": "@concat('Bearer ',pipeline().parameters.VINCI_MC_Access_Token)",
+												"type": "Expression"
+											},
+											"Content-Type": "application/json"
+										},
+										"body": {
+											"value": "@concat('{\"tags\": [\"Not ReApproved\"]}')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"VINCI_MC_BaseUrl": {
+				"type": "string"
+			},
+			"VINCI_MC_Access_Token": {
+				"type": "string"
+			},
+			"VINCI_MC_Email_Details": {
+				"type": "object"
+			},
+			"VINCI_MC_Product_Folder_ID": {
+				"type": "string"
+			},
+			"VVPM_BaseUrl": {
+				"type": "string"
+			},
+			"VVPM_SessionId": {
+				"type": "string"
+			},
+			"VVPM_Doc_Details": {
+				"type": "object"
+			},
+			"Execution_ID": {
+				"type": "string"
+			},
+			"Email_Notification_Url": {
+				"type": "string"
+			},
+			"DF_EmailID": {
+				"type": "string"
+			},
+			"Cancelled_Success_EmailTemplate_ID": {
+				"type": "string"
+			},
+			"Customer_Key": {
+				"type": "string"
+			},
+			"PO_EmailID": {
+				"type": "string"
+			},
+			"Emailer_Document_FolderID": {
+				"type": "string"
+			},
+			"VVPM_Country_Name": {
+				"type": "string"
+			},
+			"BU_Details": {
+				"type": "object"
+			},
+			"NotReApproved_Success_EmailTemplate_ID": {
+				"type": "string"
+			},
+			"Withdrawn_Success_EmailTemplate_ID": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"processed": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"increment": {
+				"type": "String",
+				"defaultValue": "0"
+			}
+		},
+		"folder": {
+			"name": "VVPM - VINCI MC Integration/5. Cancelled_Withdrawn"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-06-28T06:58:56Z"
+	}
+}

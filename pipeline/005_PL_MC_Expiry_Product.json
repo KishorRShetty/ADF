@@ -1,0 +1,414 @@
+{
+	"name": "005_PL_MC_Expiry_Product",
+	"properties": {
+		"activities": [
+			{
+				"name": "FE_Product",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].product__v",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "WEB_Check_VVPM_Doc_VINCI_MC",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "WEB_Get_VVPM_Product_Name",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.VINCI_MC_BaseUrl,'.rest.marketingcloudapis.com/asset/v1/content/assets?$filter=customerKey=',pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v,'-',pipeline().parameters.VVPM_Country_Details.data[0].abbreviation__c,'-',activity('WEB_Get_VVPM_Product_Name').output.data[0].abbreviation__c)",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Authorization": {
+										"value": "@concat('Bearer ',pipeline().parameters.VINCI_MC_Access_Token)",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "IF_SingleBU",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "LK_Get_Emailer_Document_FolderID",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(pipeline().parameters.BU_Details.firstRow.has_multiple_country,false)",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "PL_003_PL_Folder_Creation_Master_MultipleBU",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "007_PL_MC_Expiry_Folder_Creation_Master_MultipleBU",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"VINCI_MC_Count": {
+													"value": "@activity('WEB_Check_VVPM_Doc_VINCI_MC').output.count",
+													"type": "Expression"
+												},
+												"VINCI_MC_BaseUrl": {
+													"value": "@pipeline().parameters.VINCI_MC_BaseUrl",
+													"type": "Expression"
+												},
+												"VINCI_MC_Access_Token": {
+													"value": "@pipeline().parameters.VINCI_MC_Access_Token",
+													"type": "Expression"
+												},
+												"VVPM_Doc_Details": {
+													"value": "@pipeline().parameters.VVPM_Doc_Details",
+													"type": "Expression"
+												},
+												"VVPM_BaseUrl": {
+													"value": "@pipeline().parameters.VVPM_BaseUrl",
+													"type": "Expression"
+												},
+												"VVPM_SessionId": {
+													"value": "@pipeline().parameters.VVPM_SessionId",
+													"type": "Expression"
+												},
+												"VINCI_MC_Email_Details": {
+													"value": "@activity('WEB_Check_VVPM_Doc_VINCI_MC').output",
+													"type": "Expression"
+												},
+												"VINCI_MC_Archival_Folder_ID": {
+													"value": "@pipeline().parameters.Archival_Folder_ID",
+													"type": "Expression"
+												},
+												"Execution_ID": {
+													"value": "@pipeline().parameters.Execution_ID",
+													"type": "Expression"
+												},
+												"Email_Notification_Url": {
+													"value": "@pipeline().parameters.Email_Notification_Url",
+													"type": "Expression"
+												},
+												"DF_EmailID": {
+													"value": "@pipeline().parameters.DF_EmailID",
+													"type": "Expression"
+												},
+												"VVPM_Country_Name": {
+													"value": "@pipeline().parameters.VVPM_Country_Details.data[0].name__v",
+													"type": "Expression"
+												},
+												"Expiry_Success_EmailTemplate_ID": {
+													"value": "@pipeline().parameters.Expiry_Success_EmailTemplate_ID",
+													"type": "Expression"
+												},
+												"ML_Access_Token": {
+													"value": "@pipeline().parameters.ML_Access_Token",
+													"type": "Expression"
+												},
+												"ML_BaseUrl": {
+													"value": "@pipeline().parameters.ML_BaseUrl",
+													"type": "Expression"
+												},
+												"Media_Library_Email_TemplateID": {
+													"value": "@pipeline().parameters.Media_Library_Email_TemplateID",
+													"type": "Expression"
+												},
+												"Librarian_EmailID": {
+													"value": "@pipeline().parameters.Librarian_EmailID",
+													"type": "Expression"
+												},
+												"VVPM_Product_Details": {
+													"value": "@activity('WEB_Get_VVPM_Product_Name').output",
+													"type": "Expression"
+												},
+												"Customer_Key": {
+													"value": "@concat(pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v,'-',pipeline().parameters.VVPM_Country_Details.data[0].abbreviation__c,'-',activity('WEB_Get_VVPM_Product_Name').output.data[0].abbreviation__c)",
+													"type": "Expression"
+												},
+												"PO_EmailID": {
+													"value": "@pipeline().parameters.PO_EmailID",
+													"type": "Expression"
+												},
+												"Emailer_Document_FolderID": {
+													"value": "@activity('LK_Get_Emailer_Document_FolderID').output.value[0].folder_id",
+													"type": "Expression"
+												},
+												"BU_Details": {
+													"value": "@pipeline().parameters.BU_Details",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "PL_004_PL_Expiry_Folder_Creation_Master_SingleBU",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "006_PL_MC_Expiry_Folder_Creation_Master_SingleBU",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"VINCI_MC_Count": {
+													"value": "@activity('WEB_Check_VVPM_Doc_VINCI_MC').output.count",
+													"type": "Expression"
+												},
+												"VINCI_MC_BaseUrl": {
+													"value": "@pipeline().parameters.VINCI_MC_BaseUrl",
+													"type": "Expression"
+												},
+												"VINCI_MC_Access_Token": {
+													"value": "@pipeline().parameters.VINCI_MC_Access_Token",
+													"type": "Expression"
+												},
+												"VVPM_Doc_Details": {
+													"value": "@pipeline().parameters.VVPM_Doc_Details",
+													"type": "Expression"
+												},
+												"VVPM_BaseUrl": {
+													"value": "@pipeline().parameters.VVPM_BaseUrl",
+													"type": "Expression"
+												},
+												"VVPM_SessionId": {
+													"value": "@pipeline().parameters.VVPM_SessionId",
+													"type": "Expression"
+												},
+												"VINCI_MC_Email_Details": {
+													"value": "@activity('WEB_Check_VVPM_Doc_VINCI_MC').output",
+													"type": "Expression"
+												},
+												"VINCI_MC_Archival_Folder_ID": {
+													"value": "@pipeline().parameters.Archival_Folder_ID",
+													"type": "Expression"
+												},
+												"Execution_ID": {
+													"value": "@pipeline().parameters.Execution_ID",
+													"type": "Expression"
+												},
+												"Email_Notification_Url": {
+													"value": "@pipeline().parameters.Email_Notification_Url",
+													"type": "Expression"
+												},
+												"DF_EmailID": {
+													"value": "@pipeline().parameters.DF_EmailID",
+													"type": "Expression"
+												},
+												"VVPM_Country_Name": {
+													"value": "@pipeline().parameters.VVPM_Country_Details.data[0].name__v",
+													"type": "Expression"
+												},
+												"Expiry_Success_EmailTemplate_ID": {
+													"value": "@pipeline().parameters.Expiry_Success_EmailTemplate_ID",
+													"type": "Expression"
+												},
+												"Librarian_EmailID": {
+													"value": "@pipeline().parameters.Librarian_EmailID",
+													"type": "Expression"
+												},
+												"Media_Library_Email_TemplateID": {
+													"value": "@pipeline().parameters.Media_Library_Email_TemplateID",
+													"type": "Expression"
+												},
+												"ML_BaseUrl": {
+													"value": "@pipeline().parameters.ML_BaseUrl",
+													"type": "Expression"
+												},
+												"ML_Access_Token": {
+													"value": "@pipeline().parameters.ML_Access_Token",
+													"type": "Expression"
+												},
+												"VVPM_Product_Details": {
+													"value": "@activity('WEB_Get_VVPM_Product_Name').output",
+													"type": "Expression"
+												},
+												"Customer_Key": {
+													"value": "@concat(pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v,'-',pipeline().parameters.VVPM_Country_Details.data[0].abbreviation__c,'-',activity('WEB_Get_VVPM_Product_Name').output.data[0].abbreviation__c)",
+													"type": "Expression"
+												},
+												"PO_EmailID": {
+													"value": "@pipeline().parameters.PO_EmailID",
+													"type": "Expression"
+												},
+												"Emailer_Document_FolderID": {
+													"value": "@activity('LK_Get_Emailer_Document_FolderID').output.value[0].folder_id",
+													"type": "Expression"
+												},
+												"BU_Details": {
+													"value": "@pipeline().parameters.BU_Details",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "WEB_Get_VVPM_Product_Name",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.VVPM_BaseUrl,'/api/v21.2/query?q=SELECT name__v,abbreviation__c FROM product__v WHERE id = ''',pipeline().parameters.VVPM_Doc_Details.data[0].product__v[0],'''')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Authorization": {
+										"value": "@pipeline().parameters.VVPM_SessionId",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "LK_Get_Emailer_Document_FolderID",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "WEB_Check_VVPM_Doc_VINCI_MC",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderQuery": {
+										"value": "@concat('select folder_id from [VFR].[vinci_mc_folder_master] where folder_type = ''Emailer Document'' and folder_name = ''',pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v,'-',pipeline().parameters.VVPM_Country_Details.data[0].abbreviation__c,'-',activity('WEB_Get_VVPM_Product_Name').output.data[0].abbreviation__c,'''')",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "SqlServerTable12",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": false
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"VVPM_BaseUrl": {
+				"type": "string"
+			},
+			"VVPM_SessionId": {
+				"type": "string"
+			},
+			"VINCI_MC_BaseUrl": {
+				"type": "string"
+			},
+			"Execution_ID": {
+				"type": "string"
+			},
+			"Email_Notification_Url": {
+				"type": "string"
+			},
+			"Expiry_Success_EmailTemplate_ID": {
+				"type": "string"
+			},
+			"DF_EmailID": {
+				"type": "string"
+			},
+			"ML_BaseUrl": {
+				"type": "string"
+			},
+			"ML_Access_Token": {
+				"type": "string"
+			},
+			"Media_Library_Email_TemplateID": {
+				"type": "string"
+			},
+			"Librarian_EmailID": {
+				"type": "string"
+			},
+			"VVPM_Doc_Details": {
+				"type": "object"
+			},
+			"PO_EmailID": {
+				"type": "string"
+			},
+			"Archival_Folder_ID": {
+				"type": "string"
+			},
+			"VINCI_MC_Access_Token": {
+				"type": "string"
+			},
+			"BU_Details": {
+				"type": "object"
+			},
+			"VVPM_Country_Details": {
+				"type": "object"
+			}
+		},
+		"variables": {
+			"processed": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"increment": {
+				"type": "String",
+				"defaultValue": "0"
+			}
+		},
+		"folder": {
+			"name": "VVPM - VINCI MC Integration/3. Expired"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-06-28T06:56:59Z"
+	}
+}

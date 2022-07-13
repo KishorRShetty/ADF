@@ -1,0 +1,275 @@
+{
+	"name": "010_PL_MC_Cancelled_Withdrawn_Email_Notification",
+	"properties": {
+		"activities": [
+			{
+				"name": "SW_Email_Notification_by_Status",
+				"type": "Switch",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].status__v",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "Cancelled",
+							"activities": [
+								{
+									"name": "WEB_PO_Email Notification",
+									"type": "WebActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@pipeline().parameters.Email_Notification_Url",
+											"type": "Expression"
+										},
+										"method": "POST",
+										"body": {
+											"value": "@concat('{\"template_id\": \"',pipeline().parameters.Cancelled_Success_EmailTemplate_ID,'\",\"to_email\" : \"',pipeline().parameters.PO_EmailID,'\",\"doc_no\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v,'\",\"doc_name\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].name__v,'\",\"usertype\" : \"Project Owner\",\"country\" : \"',pipeline().parameters.VVPM_Country_Name,'\",\"location\" : \"''''\",\"bu_name\" : \"',pipeline().parameters.BU_Details.firstRow.bu_name,'\"}')",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "WEB_DF_Email Notification",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "WEB_PO_Email Notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@pipeline().parameters.Email_Notification_Url",
+											"type": "Expression"
+										},
+										"method": "POST",
+										"body": {
+											"value": "@concat('{\"template_id\": \"',pipeline().parameters.Cancelled_Success_EmailTemplate_ID,'\",\"to_email\" : \"',pipeline().parameters.DF_EmailID,'\",\"doc_no\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v,'\",\"doc_name\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].name__v,'\",\"usertype\" : \"Digital Factory Team\",\"country\" : \"',pipeline().parameters.VVPM_Country_Name,'\",\"location\" : \"''''\",\"bu_name\" : \"',pipeline().parameters.BU_Details.firstRow.bu_name,'\"}')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "Withdrawn",
+							"activities": [
+								{
+									"name": "WEB_PO_Email Notification_Withdrawn",
+									"type": "WebActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@pipeline().parameters.Email_Notification_Url",
+											"type": "Expression"
+										},
+										"method": "POST",
+										"body": {
+											"value": "@concat('{\"template_id\": \"',pipeline().parameters.Withdrawn_Success_EmailTemplate_ID,'\",\"to_email\" : \"',pipeline().parameters.PO_EmailID,'\",\"doc_no\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v,'\",\"doc_name\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].name__v,'\",\"usertype\" : \"Project Owner\",\"country\" : \"',pipeline().parameters.VVPM_Country_Name,'\",\"location\" : \"''''\",\"bu_name\" : \"',pipeline().parameters.BU_Details.firstRow.bu_name,'\"}')",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "WEB_DF_Email Notification_Withdrawn",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "WEB_PO_Email Notification_Withdrawn",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@pipeline().parameters.Email_Notification_Url",
+											"type": "Expression"
+										},
+										"method": "POST",
+										"body": {
+											"value": "@concat('{\"template_id\": \"',pipeline().parameters.Withdrawn_Success_EmailTemplate_ID,'\",\"to_email\" : \"',pipeline().parameters.DF_EmailID,'\",\"doc_no\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v,'\",\"doc_name\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].name__v,'\",\"usertype\" : \"Digital Factory Team\",\"country\" : \"',pipeline().parameters.VVPM_Country_Name,'\",\"location\" : \"''''\",\"bu_name\" : \"',pipeline().parameters.BU_Details.firstRow.bu_name,'\"}')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "Not Approved for Continued Use",
+							"activities": [
+								{
+									"name": "WEB_PO_Email Notification_NotReapproved",
+									"type": "WebActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@pipeline().parameters.Email_Notification_Url",
+											"type": "Expression"
+										},
+										"method": "POST",
+										"body": {
+											"value": "@concat('{\"template_id\": \"',pipeline().parameters.NotReApproved_Success_EmailTemplate_ID,'\",\"to_email\" : \"',pipeline().parameters.PO_EmailID,'\",\"doc_no\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v,'\",\"doc_name\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].name__v,'\",\"usertype\" : \"Project Owner\",\"country\" : \"',pipeline().parameters.VVPM_Country_Name,'\",\"location\" : \"''''\",\"bu_name\" : \"',pipeline().parameters.BU_Details.firstRow.bu_name,'\"}')",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "WEB_DF_Email Notification_NotReapproved",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "WEB_PO_Email Notification_NotReapproved",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@pipeline().parameters.Email_Notification_Url",
+											"type": "Expression"
+										},
+										"method": "POST",
+										"body": {
+											"value": "@concat('{\"template_id\": \"',pipeline().parameters.NotReApproved_Success_EmailTemplate_ID,'\",\"to_email\" : \"',pipeline().parameters.DF_EmailID,'\",\"doc_no\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v,'\",\"doc_name\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].name__v,'\",\"usertype\" : \"Digital Factory Team\",\"country\" : \"',pipeline().parameters.VVPM_Country_Name,'\",\"location\" : \"''''\",\"bu_name\" : \"',pipeline().parameters.BU_Details.firstRow.bu_name,'\"}')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"VINCI_MC_BaseUrl": {
+				"type": "string"
+			},
+			"VINCI_MC_Access_Token": {
+				"type": "string"
+			},
+			"VINCI_MC_Email_Details": {
+				"type": "object"
+			},
+			"VINCI_MC_Product_Folder_ID": {
+				"type": "string"
+			},
+			"VVPM_BaseUrl": {
+				"type": "string"
+			},
+			"VVPM_SessionId": {
+				"type": "string"
+			},
+			"VVPM_Doc_Details": {
+				"type": "object"
+			},
+			"Execution_ID": {
+				"type": "string"
+			},
+			"Email_Notification_Url": {
+				"type": "string"
+			},
+			"DF_EmailID": {
+				"type": "string"
+			},
+			"Cancelled_Success_EmailTemplate_ID": {
+				"type": "string"
+			},
+			"Customer_Key": {
+				"type": "string"
+			},
+			"PO_EmailID": {
+				"type": "string"
+			},
+			"Emailer_Document_FolderID": {
+				"type": "string"
+			},
+			"VVPM_Country_Name": {
+				"type": "string"
+			},
+			"BU_Details": {
+				"type": "object"
+			},
+			"NotReApproved_Success_EmailTemplate_ID": {
+				"type": "string"
+			},
+			"Withdrawn_Success_EmailTemplate_ID": {
+				"type": "string"
+			},
+			"Flag_Update_Status": {
+				"type": "object"
+			}
+		},
+		"variables": {
+			"processed": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"increment": {
+				"type": "String",
+				"defaultValue": "0"
+			}
+		},
+		"folder": {
+			"name": "VVPM - VINCI MC Integration/5. Cancelled_Withdrawn"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-06-28T06:58:55Z"
+	}
+}

@@ -1,0 +1,220 @@
+{
+	"name": "006_PL_MC_AFD_Email_Notification",
+	"properties": {
+		"activities": [
+			{
+				"name": "IF_Published_uat_flag_Updated",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.Flag_Update_Status.responseStatus,'SUCCESS')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "SP_add_asset_log_publisheduatflag_errorlog",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[VFR].[add_asset_log]",
+								"storedProcedureParameters": {
+									"created_by": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"created_date": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"error_activity_name": {
+										"value": "Country Folder Creation Error",
+										"type": "String"
+									},
+									"error_message": {
+										"value": {
+											"value": "@pipeline().parameters.Flag_Update_Status.errors",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"error_timestamp": {
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"execution_id": {
+										"value": {
+											"value": "@pipeline().parameters.Execution_ID",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_asset_id": {
+										"value": {
+											"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_asset_name": {
+										"value": {
+											"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].name__v",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"source_asset_type": {
+										"value": "VINCI MC Email",
+										"type": "String"
+									},
+									"status": {
+										"value": "Published from UAT to PROD Flag Update Failure",
+										"type": "String"
+									},
+									"target_asset_id": {
+										"value": "Error",
+										"type": "String"
+									},
+									"target_asset_name": {
+										"value": "Error",
+										"type": "String"
+									},
+									"target_asset_type": {
+										"value": "Error",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "SqlServer1",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "WEB_AFD_DF_Email Notification",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "WEB_AFD_PO_Email Notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@pipeline().parameters.Email_Notification_Url",
+									"type": "Expression"
+								},
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"template_id\": \"',pipeline().parameters.AFD_Success_EmailTemplate_ID,'\",\"to_email\" : \"',pipeline().parameters.DF_EmailID,'\",\"doc_no\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v,'\",\"doc_name\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].name__v,'\",\"usertype\" : \"Digital Factory Team\",\"country\" : \"',pipeline().parameters.VVPM_Country_Details.data[0].name__v,'\",\"location\" : \"''''\",\"bu_name\" : \"',pipeline().parameters.BU_Details.firstRow.bu_name,'\"}')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "WEB_AFD_PO_Email Notification",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@pipeline().parameters.Email_Notification_Url",
+									"type": "Expression"
+								},
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"template_id\": \"',pipeline().parameters.AFD_Success_EmailTemplate_ID,'\",\"to_email\" : \"',pipeline().parameters.PO_EmailID,'\",\"doc_no\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].document_number__v,'\",\"doc_name\" : \"',pipeline().parameters.VVPM_Doc_Details.data[0].name__v,'\",\"usertype\" : \"Project Owner\",\"country\" : \"',pipeline().parameters.VVPM_Country_Details.data[0].name__v,'\",\"location\" : \"''''\",\"bu_name\" : \"',pipeline().parameters.BU_Details.firstRow.bu_name,'\"}')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"Execution_ID": {
+				"type": "string"
+			},
+			"Email_Notification_Url": {
+				"type": "string"
+			},
+			"DF_EmailID": {
+				"type": "string"
+			},
+			"AFD_Success_EmailTemplate_ID": {
+				"type": "string"
+			},
+			"VVPM_Doc_Details": {
+				"type": "object"
+			},
+			"VVPM_Country_Details": {
+				"type": "object"
+			},
+			"BU_Details": {
+				"type": "object"
+			},
+			"PO_EmailID": {
+				"type": "string"
+			},
+			"Flag_Update_Status": {
+				"type": "object"
+			}
+		},
+		"variables": {
+			"processed": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"increment": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"ML_Expiration_date": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "VVPM - VINCI MC Integration/2. Approved for Distribution"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-06-28T06:56:57Z"
+	}
+}
