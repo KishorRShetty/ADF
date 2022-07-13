@@ -13,6 +13,2121 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/002_PL_MC_AFD_Keyvault')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "WEB_Keyvault_Get_VVPM_Baseurl",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VVPMBaseUrl?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					},
+					{
+						"name": "WEB_Keyvault_Get_VVPM_Username",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VVPMUsername?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					},
+					{
+						"name": "WEB_Keyvault_Get_VVPM_Password",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VVPMPassword?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					},
+					{
+						"name": "WEB_VVPM_Auth",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "WEB_Keyvault_Get_VVPM_Password",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "WEB_Keyvault_Get_VVPM_Username",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "WEB_Keyvault_Get_VVPM_Baseurl",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat(activity('WEB_Keyvault_Get_VVPM_Baseurl').output.value,'/api/v21.2/auth')",
+								"type": "Expression"
+							},
+							"method": "POST",
+							"headers": {
+								"Content-Type": "application/x-www-form-urlencoded"
+							},
+							"body": {
+								"value": "@concat('username=',activity('WEB_Keyvault_Get_VVPM_Username').output.value,'&password=',activity('WEB_Keyvault_Get_VVPM_Password').output.value)",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "WEB_Keyvault_Emailnotification_url",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/AF-SendEmailNotification?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					},
+					{
+						"name": "PL_002_VINCI_MC_Master_AFD",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "WEB_Keyvault_Emailnotification_url",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "WEB_VVPM_Auth",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "WEB_Keyvault_DF_EmailId",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "WEB_Keyvault_AFD_Success_Email_TemplateID",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "WEB_Keyvault_Get_VINCI_MC_Baseurl",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "003_PL_MC_AFD_Master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"VVPM_BaseUrl": {
+									"value": "@activity('WEB_Keyvault_Get_VVPM_Baseurl').output.value",
+									"type": "Expression"
+								},
+								"VVPM_SessionId": {
+									"value": "@activity('WEB_VVPM_Auth').output.sessionId",
+									"type": "Expression"
+								},
+								"Execution_ID": {
+									"value": "@pipeline().parameters.Execution_ID",
+									"type": "Expression"
+								},
+								"Email_Notification_Url": {
+									"value": "@activity('WEB_Keyvault_Emailnotification_url').output.value",
+									"type": "Expression"
+								},
+								"DF_EmailID": {
+									"value": "@activity('WEB_Keyvault_DF_EmailId').output.value",
+									"type": "Expression"
+								},
+								"VINCI_MC_BaseUrl": {
+									"value": "@activity('WEB_Keyvault_Get_VINCI_MC_Baseurl').output.value",
+									"type": "Expression"
+								},
+								"AFD_Success_EmailTemplate_ID": {
+									"value": "@activity('WEB_Keyvault_AFD_Success_Email_TemplateID').output.value",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "WEB_Keyvault_Get_VINCI_MC_Baseurl",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VINCI-MC-BaseUrl?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					},
+					{
+						"name": "SP_add_asset_log_vvpm_errorlog",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "WEB_VVPM_Auth",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[VFR].[add_asset_log]",
+							"storedProcedureParameters": {
+								"created_by": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"created_date": {
+									"value": {
+										"value": "@utcnow()",
+										"type": "Expression"
+									},
+									"type": "DateTime"
+								},
+								"error_activity_name": {
+									"value": "VVPM Authentication Error",
+									"type": "String"
+								},
+								"error_message": {
+									"value": {
+										"value": "@activity('WEB_VVPM_Auth').output",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"error_timestamp": {
+									"value": {
+										"value": "@utcnow()",
+										"type": "Expression"
+									},
+									"type": "DateTime"
+								},
+								"execution_id": {
+									"value": {
+										"value": "@pipeline().parameters.Execution_ID",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"source_asset_id": {
+									"value": "Error",
+									"type": "String"
+								},
+								"source_asset_name": {
+									"value": "Error",
+									"type": "String"
+								},
+								"source_asset_type": {
+									"value": "VINCI MC Email",
+									"type": "String"
+								},
+								"status": {
+									"value": "Draft - Blank Email Template - Failure",
+									"type": "String"
+								},
+								"target_asset_id": {
+									"value": "Error",
+									"type": "String"
+								},
+								"target_asset_name": {
+									"value": "Error",
+									"type": "String"
+								},
+								"target_asset_type": {
+									"value": "Error",
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "SqlServer1",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "WEB_Keyvault_DF_EmailId",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/MC-DigitalFactory-EmailID?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					},
+					{
+						"name": "WEB_Keyvault_AFD_Success_Email_TemplateID",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/SendGrid-MC-AFD-Success-TemplateID?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"Execution_ID": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "VVPM - VINCI MC Integration/2. Approved for Distribution"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-06-28T06:56:59Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/002_PL_MC_Reapproval_Keyvault')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "WEB_Keyvault_Get_VVPM_Baseurl",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VVPMBaseUrl?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					},
+					{
+						"name": "WEB_Keyvault_Get_VVPM_Username",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VVPMUsername?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					},
+					{
+						"name": "WEB_Keyvault_Get_VVPM_Password",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VVPMPassword?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					},
+					{
+						"name": "WEB_VVPM_Auth",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "WEB_Keyvault_Get_VVPM_Password",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "WEB_Keyvault_Get_VVPM_Username",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "WEB_Keyvault_Get_VVPM_Baseurl",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat(activity('WEB_Keyvault_Get_VVPM_Baseurl').output.value,'/api/v21.2/auth')",
+								"type": "Expression"
+							},
+							"method": "POST",
+							"headers": {
+								"Content-Type": "application/x-www-form-urlencoded"
+							},
+							"body": {
+								"value": "@concat('username=',activity('WEB_Keyvault_Get_VVPM_Username').output.value,'&password=',activity('WEB_Keyvault_Get_VVPM_Password').output.value)",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "WEB_Keyvault_Emailnotification_url",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/AF-SendEmailNotification?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					},
+					{
+						"name": "PL_002_VINCI_MC_Master_Draft",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "WEB_Keyvault_Emailnotification_url",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "WEB_VVPM_Auth",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "WEB_Keyvault_DF_EmailId",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "WEB_Keyvault_Reapproval_EmailTemplateID",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "WEB_Keyvault_Get_VINCI_MC_Baseurl",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "003_PL_MC_Reapproval_Master",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"VVPM_BaseUrl": {
+									"value": "@activity('WEB_Keyvault_Get_VVPM_Baseurl').output.value",
+									"type": "Expression"
+								},
+								"VVPM_SessionId": {
+									"value": "@activity('WEB_VVPM_Auth').output.sessionId",
+									"type": "Expression"
+								},
+								"VINCI_MC_BaseUrl": {
+									"value": "@activity('WEB_Keyvault_Get_VINCI_MC_Baseurl').output.value",
+									"type": "Expression"
+								},
+								"Execution_ID": {
+									"value": "@pipeline().parameters.Execution_ID",
+									"type": "Expression"
+								},
+								"Email_Notification_Url": {
+									"value": "@activity('WEB_Keyvault_Emailnotification_url').output.value",
+									"type": "Expression"
+								},
+								"Reapproval_EmailTemplate_ID": {
+									"value": "@activity('WEB_Keyvault_Reapproval_EmailTemplateID').output.value",
+									"type": "Expression"
+								},
+								"DF_EmailID": {
+									"value": "@activity('WEB_Keyvault_DF_EmailId').output.value",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "WEB_Keyvault_Get_VINCI_MC_Baseurl",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VINCI-MC-BaseUrl?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					},
+					{
+						"name": "WEB_Keyvault_DF_EmailId",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/MC-DigitalFactory-EmailID?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					},
+					{
+						"name": "SP_add_asset_log_vvpm_errorlog",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "WEB_VVPM_Auth",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[VFR].[add_asset_log]",
+							"storedProcedureParameters": {
+								"created_by": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"created_date": {
+									"value": {
+										"value": "@utcnow()",
+										"type": "Expression"
+									},
+									"type": "DateTime"
+								},
+								"error_activity_name": {
+									"value": "VVPM Authentication Error",
+									"type": "String"
+								},
+								"error_message": {
+									"value": {
+										"value": "@activity('WEB_VVPM_Auth').output",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"error_timestamp": {
+									"value": {
+										"value": "@utcnow()",
+										"type": "Expression"
+									},
+									"type": "DateTime"
+								},
+								"execution_id": {
+									"value": {
+										"value": "@pipeline().parameters.Execution_ID",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"source_asset_id": {
+									"value": "Error",
+									"type": "String"
+								},
+								"source_asset_name": {
+									"value": "Error",
+									"type": "String"
+								},
+								"source_asset_type": {
+									"value": "VINCI MC Email",
+									"type": "String"
+								},
+								"status": {
+									"value": "Draft - Blank Email Template - Failure",
+									"type": "String"
+								},
+								"target_asset_id": {
+									"value": "Error",
+									"type": "String"
+								},
+								"target_asset_name": {
+									"value": "Error",
+									"type": "String"
+								},
+								"target_asset_type": {
+									"value": "Error",
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "SqlServer1",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "WEB_Keyvault_Reapproval_EmailTemplateID",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/SendGrid-MC-InReapprovalSuccess-TemplateID?api-version=7.0')",
+								"type": "Expression"
+							},
+							"method": "GET",
+							"headers": {},
+							"linkedServices": [
+								{
+									"referenceName": "KeyVaultLinkedService",
+									"type": "LinkedServiceReference"
+								}
+							],
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://vault.azure.net"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"Execution_ID": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "VVPM - VINCI MC Integration/4. Reapproval"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-06-28T06:56:59Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/004_PL_MC_Cancelled_Withdrawn_Country')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "FE_Country",
+						"type": "ForEach",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].country__v",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "WEB_Get_VVPM_Country_Name_BU",
+									"type": "WebActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat(pipeline().parameters.VVPM_BaseUrl,'/api/v21.2/query?q=SELECT name__v,abbreviation__c FROM country__v WHERE id = ''',item(),'''')",
+											"type": "Expression"
+										},
+										"method": "GET",
+										"headers": {
+											"Authorization": {
+												"value": "@pipeline().parameters.VVPM_SessionId",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "LK_BU_Name_SP",
+									"type": "Lookup",
+									"dependsOn": [
+										{
+											"activity": "WEB_Get_VVPM_Country_Name_BU",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderStoredProcedureName": "[[VFR].[get_mc_bu_name]",
+											"storedProcedureParameters": {
+												"bu_name": {
+													"type": "String",
+													"value": null
+												},
+												"country_name": {
+													"type": "String",
+													"value": {
+														"value": "@activity('WEB_Get_VVPM_Country_Name_BU').output.data[0].name__v",
+														"type": "Expression"
+													}
+												},
+												"has_multiple_country": {
+													"type": "Boolean",
+													"value": null
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "SqlServerTable14",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									}
+								},
+								{
+									"name": "WEB_Keyvault_Get_VINCI_MC_BU_ClientID",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "LK_BU_Name_SP",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VINCI-MC-ClientID-',activity('LK_BU_Name_SP').output.firstRow.bu_name,'?api-version=7.0')",
+											"type": "Expression"
+										},
+										"method": "GET",
+										"headers": {},
+										"linkedServices": [
+											{
+												"referenceName": "KeyVaultLinkedService",
+												"type": "LinkedServiceReference"
+											}
+										],
+										"authentication": {
+											"type": "MSI",
+											"resource": "https://vault.azure.net"
+										}
+									}
+								},
+								{
+									"name": "WEB_Keyvault_Get_VINCI_MC_BU_ClientSecret",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "LK_BU_Name_SP",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VINCI-MC-ClientSecret-',activity('LK_BU_Name_SP').output.firstRow.bu_name,'?api-version=7.0')",
+											"type": "Expression"
+										},
+										"method": "GET",
+										"headers": {},
+										"linkedServices": [
+											{
+												"referenceName": "KeyVaultLinkedService",
+												"type": "LinkedServiceReference"
+											}
+										],
+										"authentication": {
+											"type": "MSI",
+											"resource": "https://vault.azure.net"
+										}
+									}
+								},
+								{
+									"name": "WEB_VINCI_BU_MC_Auth",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "WEB_Keyvault_Get_VINCI_MC_BU_ClientID",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										},
+										{
+											"activity": "WEB_Keyvault_Get_VINCI_MC_BU_ClientSecret",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat(pipeline().parameters.VINCI_MC_BaseUrl,'.auth.marketingcloudapis.com/v2/token')",
+											"type": "Expression"
+										},
+										"method": "POST",
+										"headers": {
+											"Content-Type": "application/x-www-form-urlencoded"
+										},
+										"body": {
+											"value": "@concat('grant_type=client_credentials&client_id=',activity('WEB_Keyvault_Get_VINCI_MC_BU_ClientID').output.value,'&client_secret=',activity('WEB_Keyvault_Get_VINCI_MC_BU_ClientSecret').output.value)",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "LK_Archival_Folder_ID",
+									"type": "Lookup",
+									"dependsOn": [
+										{
+											"activity": "WEB_VINCI_BU_MC_Auth",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderQuery": {
+												"value": "@concat('select folder_id from vfr.vinci_mc_folder_master where folder_name = ''Archival_Expired_Emails'' and folder_type = ''Archival ',activity('LK_BU_Name_SP').output.firstRow.bu_name,'''')",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "SqlServerTable14",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									}
+								},
+								{
+									"name": "PL_005_Product_Loop_MC_Cancelled",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "LK_Archival_Folder_ID",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "005_PL_MC_Cancelled_Withdrawn_Product",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"VVPM_BaseUrl": {
+												"value": "@pipeline().parameters.VVPM_BaseUrl",
+												"type": "Expression"
+											},
+											"VVPM_SessionId": {
+												"value": "@pipeline().parameters.VVPM_SessionId",
+												"type": "Expression"
+											},
+											"VINCI_MC_BaseUrl": {
+												"value": "@pipeline().parameters.VINCI_MC_BaseUrl",
+												"type": "Expression"
+											},
+											"Execution_ID": {
+												"value": "@pipeline().parameters.Execution_ID",
+												"type": "Expression"
+											},
+											"Email_Notification_Url": {
+												"value": "@pipeline().parameters.Email_Notification_Url",
+												"type": "Expression"
+											},
+											"Cancelled_Success_EmailTemplate_ID": {
+												"value": "@pipeline().parameters.Cancelled_Success_EmailTemplate_ID",
+												"type": "Expression"
+											},
+											"DF_EmailID": {
+												"value": "@pipeline().parameters.DF_EmailID",
+												"type": "Expression"
+											},
+											"VVPM_Doc_Details": {
+												"value": "@pipeline().parameters.VVPM_Doc_Details",
+												"type": "Expression"
+											},
+											"PO_EmailID": {
+												"value": "@pipeline().parameters.PO_EmailID",
+												"type": "Expression"
+											},
+											"Archival_Folder_ID": {
+												"value": "@activity('LK_Archival_Folder_ID').output.firstRow.folder_id",
+												"type": "Expression"
+											},
+											"VINCI_MC_Access_Token": {
+												"value": "@activity('WEB_VINCI_BU_MC_Auth').output.access_token",
+												"type": "Expression"
+											},
+											"BU_Details": {
+												"value": "@activity('LK_BU_Name_SP').output",
+												"type": "Expression"
+											},
+											"VVPM_Country_Details": {
+												"value": "@activity('WEB_Get_VVPM_Country_Name_BU').output",
+												"type": "Expression"
+											},
+											"Withdrawn_Success_EmailTemplate_ID": {
+												"value": "@pipeline().parameters.Withdrawn_Success_EmailTemplate_ID",
+												"type": "Expression"
+											},
+											"NotReApproved_Success_EmailTemplate_ID": {
+												"value": "@pipeline().parameters.NotReApproved_Success_EmailTemplate_ID",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"VVPM_BaseUrl": {
+						"type": "string"
+					},
+					"VVPM_SessionId": {
+						"type": "string"
+					},
+					"VINCI_MC_BaseUrl": {
+						"type": "string"
+					},
+					"VINCI_MC_Archival_Folder_ID": {
+						"type": "string"
+					},
+					"Execution_ID": {
+						"type": "string"
+					},
+					"Email_Notification_Url": {
+						"type": "string"
+					},
+					"Cancelled_Success_EmailTemplate_ID": {
+						"type": "string"
+					},
+					"DF_EmailID": {
+						"type": "string"
+					},
+					"VVPM_Doc_Details": {
+						"type": "object"
+					},
+					"PO_EmailID": {
+						"type": "string"
+					},
+					"Withdrawn_Success_EmailTemplate_ID": {
+						"type": "string"
+					},
+					"NotReApproved_Success_EmailTemplate_ID": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"processed": {
+						"type": "String",
+						"defaultValue": "0"
+					},
+					"increment": {
+						"type": "String",
+						"defaultValue": "0"
+					}
+				},
+				"folder": {
+					"name": "VVPM - VINCI MC Integration/5. Cancelled_Withdrawn"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-06-28T07:02:57Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/004_PL_MC_Draft_Country')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "FE_Country",
+						"type": "ForEach",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].country__v",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "WEB_Get_VVPM_Country_Name_BU",
+									"type": "WebActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat(pipeline().parameters.VVPM_BaseUrl,'/api/v21.2/query?q=SELECT name__v,abbreviation__c FROM country__v WHERE id = ''',item(),'''')",
+											"type": "Expression"
+										},
+										"method": "GET",
+										"headers": {
+											"Authorization": {
+												"value": "@pipeline().parameters.VVPM_SessionId",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "LK_BU_Name_SP",
+									"type": "Lookup",
+									"dependsOn": [
+										{
+											"activity": "WEB_Get_VVPM_Country_Name_BU",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderStoredProcedureName": "[[VFR].[get_mc_bu_name]",
+											"storedProcedureParameters": {
+												"bu_name": {
+													"type": "String",
+													"value": null
+												},
+												"country_name": {
+													"type": "String",
+													"value": {
+														"value": "@activity('WEB_Get_VVPM_Country_Name_BU').output.data[0].name__v",
+														"type": "Expression"
+													}
+												},
+												"has_multiple_country": {
+													"type": "Boolean",
+													"value": null
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "SqlServerTable11",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									}
+								},
+								{
+									"name": "WEB_Keyvault_Get_VINCI_MC_BU_ClientID",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "LK_BU_Name_SP",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VINCI-MC-ClientID-',activity('LK_BU_Name_SP').output.firstRow.bu_name,'?api-version=7.0')",
+											"type": "Expression"
+										},
+										"method": "GET",
+										"headers": {},
+										"linkedServices": [
+											{
+												"referenceName": "KeyVaultLinkedService",
+												"type": "LinkedServiceReference"
+											}
+										],
+										"authentication": {
+											"type": "MSI",
+											"resource": "https://vault.azure.net"
+										}
+									}
+								},
+								{
+									"name": "WEB_Keyvault_Get_VINCI_MC_BU_ClientSecret",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "LK_BU_Name_SP",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VINCI-MC-ClientSecret-',activity('LK_BU_Name_SP').output.firstRow.bu_name,'?api-version=7.0')",
+											"type": "Expression"
+										},
+										"method": "GET",
+										"headers": {},
+										"linkedServices": [
+											{
+												"referenceName": "KeyVaultLinkedService",
+												"type": "LinkedServiceReference"
+											}
+										],
+										"authentication": {
+											"type": "MSI",
+											"resource": "https://vault.azure.net"
+										}
+									}
+								},
+								{
+									"name": "WEB_VINCI_BU_MC_Auth",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "WEB_Keyvault_Get_VINCI_MC_BU_ClientSecret",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										},
+										{
+											"activity": "WEB_Keyvault_Get_VINCI_MC_BU_ClientID",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat(pipeline().parameters.VINCI_MC_BaseUrl,'.auth.marketingcloudapis.com/v2/token')",
+											"type": "Expression"
+										},
+										"method": "POST",
+										"headers": {
+											"Content-Type": "application/x-www-form-urlencoded"
+										},
+										"body": {
+											"value": "@concat('grant_type=client_credentials&client_id=',activity('WEB_Keyvault_Get_VINCI_MC_BU_ClientID').output.value,'&client_secret=',activity('WEB_Keyvault_Get_VINCI_MC_BU_ClientSecret').output.value)",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "PL_005_Loop_Product",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "LK_IQ_Folder_ID",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "005_PL_MC_Draft_Product",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"VVPM_BaseUrl": {
+												"value": "@pipeline().parameters.VVPM_BaseUrl",
+												"type": "Expression"
+											},
+											"VVPM_SessionId": {
+												"value": "@pipeline().parameters.VVPM_SessionId",
+												"type": "Expression"
+											},
+											"VINCI_MC_BaseUrl": {
+												"value": "@pipeline().parameters.VINCI_MC_BaseUrl",
+												"type": "Expression"
+											},
+											"VINCI_MC_Access_Token": {
+												"value": "@activity('WEB_VINCI_BU_MC_Auth').output.access_token",
+												"type": "Expression"
+											},
+											"Execution_ID": {
+												"value": "@pipeline().parameters.Execution_ID",
+												"type": "Expression"
+											},
+											"Email_Notification_Url": {
+												"value": "@pipeline().parameters.Email_Notification_Url",
+												"type": "Expression"
+											},
+											"Draft_Success_EmailTemplate_ID": {
+												"value": "@pipeline().parameters.Draft_Success_EmailTemplate_ID",
+												"type": "Expression"
+											},
+											"Draft_Error_EmailTemplate_ID": {
+												"value": "@pipeline().parameters.Draft_Error_EmailTemplate_ID",
+												"type": "Expression"
+											},
+											"ReDraft_Success_EmailTemplate_ID": {
+												"value": "@pipeline().parameters.ReDraft_Success_EmailTemplate_ID",
+												"type": "Expression"
+											},
+											"DF_EmailID": {
+												"value": "@pipeline().parameters.DF_EmailID",
+												"type": "Expression"
+											},
+											"VVPM_Doc_Details": {
+												"value": "@pipeline().parameters.VVPM_Doc_Details",
+												"type": "Expression"
+											},
+											"BU_Details": {
+												"value": "@activity('LK_BU_Name_SP').output",
+												"type": "Expression"
+											},
+											"VVPM_Country_Name": {
+												"value": "@activity('WEB_Get_VVPM_Country_Name_BU').output.data[0].name__v",
+												"type": "Expression"
+											},
+											"VINCI_MC_IQ_Folder_ID": {
+												"value": "@activity('LK_IQ_Folder_ID').output.firstRow.folder_id",
+												"type": "Expression"
+											},
+											"PO_EmailID": {
+												"value": "@pipeline().parameters.PO_EmailID",
+												"type": "Expression"
+											},
+											"Email_Asset_Type": {
+												"value": "@pipeline().parameters.Email_Asset_Type",
+												"type": "Expression"
+											},
+											"VVPM_Country_Abbrevation": {
+												"value": "@activity('WEB_Get_VVPM_Country_Name_BU').output.data[0].abbreviation__c",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "LK_IQ_Folder_ID",
+									"type": "Lookup",
+									"dependsOn": [
+										{
+											"activity": "WEB_VINCI_BU_MC_Auth",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderQuery": {
+												"value": "@concat('select folder_id from vfr.vinci_mc_folder_master where folder_name = ''_IQ'' and folder_type = ''Root ',activity('LK_BU_Name_SP').output.firstRow.bu_name,'''')",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "SqlServerTable11",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"VVPM_BaseUrl": {
+						"type": "string"
+					},
+					"VVPM_SessionId": {
+						"type": "string"
+					},
+					"VINCI_MC_BaseUrl": {
+						"type": "string"
+					},
+					"Execution_ID": {
+						"type": "string"
+					},
+					"Email_Notification_Url": {
+						"type": "string"
+					},
+					"Draft_Success_EmailTemplate_ID": {
+						"type": "string"
+					},
+					"Draft_Error_EmailTemplate_ID": {
+						"type": "string"
+					},
+					"ReDraft_Success_EmailTemplate_ID": {
+						"type": "string"
+					},
+					"DF_EmailID": {
+						"type": "string"
+					},
+					"VVPM_Doc_Details": {
+						"type": "object"
+					},
+					"PO_EmailID": {
+						"type": "string"
+					},
+					"Email_Asset_Type": {
+						"type": "object"
+					}
+				},
+				"variables": {
+					"processed": {
+						"type": "String",
+						"defaultValue": "0"
+					},
+					"increment": {
+						"type": "String",
+						"defaultValue": "0"
+					},
+					"Digital_Factory_BU": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "VVPM - VINCI MC Integration/1. Draft"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-06-28T06:56:59Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/004_PL_MC_Expiry_Country')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "FE_Country",
+						"type": "ForEach",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@pipeline().parameters.VVPM_Doc_Details.data[0].country__v",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "WEB_Get_VVPM_Country_Name_BU",
+									"type": "WebActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat(pipeline().parameters.VVPM_BaseUrl,'/api/v21.2/query?q=SELECT name__v,abbreviation__c FROM country__v WHERE id = ''',item(),'''')",
+											"type": "Expression"
+										},
+										"method": "GET",
+										"headers": {
+											"Authorization": {
+												"value": "@pipeline().parameters.VVPM_SessionId",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "LK_BU_Name_SP",
+									"type": "Lookup",
+									"dependsOn": [
+										{
+											"activity": "WEB_Get_VVPM_Country_Name_BU",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderStoredProcedureName": "[[VFR].[get_mc_bu_name]",
+											"storedProcedureParameters": {
+												"bu_name": {
+													"type": "String",
+													"value": null
+												},
+												"country_name": {
+													"type": "String",
+													"value": {
+														"value": "@activity('WEB_Get_VVPM_Country_Name_BU').output.data[0].name__v",
+														"type": "Expression"
+													}
+												},
+												"has_multiple_country": {
+													"type": "Boolean",
+													"value": null
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "SqlServerTable12",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									}
+								},
+								{
+									"name": "WEB_Keyvault_Get_VINCI_MC_BU_ClientID",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "LK_BU_Name_SP",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VINCI-MC-ClientID-',activity('LK_BU_Name_SP').output.firstRow.bu_name,'?api-version=7.0')",
+											"type": "Expression"
+										},
+										"method": "GET",
+										"headers": {},
+										"linkedServices": [
+											{
+												"referenceName": "KeyVaultLinkedService",
+												"type": "LinkedServiceReference"
+											}
+										],
+										"authentication": {
+											"type": "MSI",
+											"resource": "https://vault.azure.net"
+										}
+									}
+								},
+								{
+									"name": "WEB_Keyvault_Get_VINCI_MC_BU_ClientSecret",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "LK_BU_Name_SP",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat('https://',replace(pipeline().DataFactory,'ADF','AKV'),'.vault.azure.net/secrets/VINCI-MC-ClientSecret-',activity('LK_BU_Name_SP').output.firstRow.bu_name,'?api-version=7.0')",
+											"type": "Expression"
+										},
+										"method": "GET",
+										"headers": {},
+										"linkedServices": [
+											{
+												"referenceName": "KeyVaultLinkedService",
+												"type": "LinkedServiceReference"
+											}
+										],
+										"authentication": {
+											"type": "MSI",
+											"resource": "https://vault.azure.net"
+										}
+									}
+								},
+								{
+									"name": "WEB_VINCI_BU_MC_Auth",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "WEB_Keyvault_Get_VINCI_MC_BU_ClientID",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										},
+										{
+											"activity": "WEB_Keyvault_Get_VINCI_MC_BU_ClientSecret",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "@concat(pipeline().parameters.VINCI_MC_BaseUrl,'.auth.marketingcloudapis.com/v2/token')",
+											"type": "Expression"
+										},
+										"method": "POST",
+										"headers": {
+											"Content-Type": "application/x-www-form-urlencoded"
+										},
+										"body": {
+											"value": "@concat('grant_type=client_credentials&client_id=',activity('WEB_Keyvault_Get_VINCI_MC_BU_ClientID').output.value,'&client_secret=',activity('WEB_Keyvault_Get_VINCI_MC_BU_ClientSecret').output.value)",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "LK_Archival_Folder_ID",
+									"type": "Lookup",
+									"dependsOn": [
+										{
+											"activity": "WEB_VINCI_BU_MC_Auth",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderQuery": {
+												"value": "@concat('select folder_id from vfr.vinci_mc_folder_master where folder_name = ''Archival_Expired_Emails'' and folder_type = ''Archival ',activity('LK_BU_Name_SP').output.firstRow.bu_name,'''')",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "SqlServerTable12",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									}
+								},
+								{
+									"name": "PL_005_Product_Loop_MC_Expiry",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "LK_Archival_Folder_ID",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "005_PL_MC_Expiry_Product",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"VVPM_BaseUrl": {
+												"value": "@pipeline().parameters.VVPM_BaseUrl",
+												"type": "Expression"
+											},
+											"VVPM_SessionId": {
+												"value": "@pipeline().parameters.VVPM_SessionId",
+												"type": "Expression"
+											},
+											"VINCI_MC_BaseUrl": {
+												"value": "@pipeline().parameters.VINCI_MC_BaseUrl",
+												"type": "Expression"
+											},
+											"Execution_ID": {
+												"value": "@pipeline().parameters.Execution_ID",
+												"type": "Expression"
+											},
+											"Email_Notification_Url": {
+												"value": "@pipeline().parameters.Email_Notification_Url",
+												"type": "Expression"
+											},
+											"Expiry_Success_EmailTemplate_ID": {
+												"value": "@pipeline().parameters.Expiry_Success_EmailTemplate_ID",
+												"type": "Expression"
+											},
+											"DF_EmailID": {
+												"value": "@pipeline().parameters.DF_EmailID",
+												"type": "Expression"
+											},
+											"ML_BaseUrl": {
+												"value": "@pipeline().parameters.ML_BaseUrl",
+												"type": "Expression"
+											},
+											"ML_Access_Token": {
+												"value": "@pipeline().parameters.ML_Access_Token",
+												"type": "Expression"
+											},
+											"Media_Library_Email_TemplateID": {
+												"value": "@pipeline().parameters.Media_Library_Email_TemplateID",
+												"type": "Expression"
+											},
+											"Librarian_EmailID": {
+												"value": "@pipeline().parameters.Librarian_EmailID",
+												"type": "Expression"
+											},
+											"VVPM_Doc_Details": {
+												"value": "@pipeline().parameters.VVPM_Doc_Details",
+												"type": "Expression"
+											},
+											"PO_EmailID": {
+												"value": "@pipeline().parameters.PO_EmailID",
+												"type": "Expression"
+											},
+											"Archival_Folder_ID": {
+												"value": "@activity('LK_Archival_Folder_ID').output.firstRow.folder_id",
+												"type": "Expression"
+											},
+											"VINCI_MC_Access_Token": {
+												"value": "@activity('WEB_VINCI_BU_MC_Auth').output.access_token",
+												"type": "Expression"
+											},
+											"BU_Details": {
+												"value": "@activity('LK_BU_Name_SP').output",
+												"type": "Expression"
+											},
+											"VVPM_Country_Details": {
+												"value": "@activity('WEB_Get_VVPM_Country_Name_BU').output",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"VVPM_BaseUrl": {
+						"type": "string"
+					},
+					"VVPM_SessionId": {
+						"type": "string"
+					},
+					"VINCI_MC_BaseUrl": {
+						"type": "string"
+					},
+					"VINCI_MC_Archival_Folder_ID": {
+						"type": "string"
+					},
+					"Execution_ID": {
+						"type": "string"
+					},
+					"Email_Notification_Url": {
+						"type": "string"
+					},
+					"Expiry_Success_EmailTemplate_ID": {
+						"type": "string"
+					},
+					"DF_EmailID": {
+						"type": "string"
+					},
+					"ML_BaseUrl": {
+						"type": "string"
+					},
+					"ML_Access_Token": {
+						"type": "string"
+					},
+					"Media_Library_Email_TemplateID": {
+						"type": "string"
+					},
+					"Librarian_EmailID": {
+						"type": "string"
+					},
+					"VVPM_Doc_Details": {
+						"type": "object"
+					},
+					"PO_EmailID": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"processed": {
+						"type": "String",
+						"defaultValue": "0"
+					},
+					"increment": {
+						"type": "String",
+						"defaultValue": "0"
+					}
+				},
+				"folder": {
+					"name": "VVPM - VINCI MC Integration/3. Expired"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-06-28T06:57:00Z"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/004_PL_MC_Expiry_Country1')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -572,7 +2687,167 @@
 				"annotations": [],
 				"lastPublishTime": "2022-06-28T06:57:00Z"
 			},
-			"dependsOn": []
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/002_PL_MC_AFD_Keyvault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/001_PL_MC_Reapproval_Trigger')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "SP_add_batch_log",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[VFR].[add_batch_log]",
+							"storedProcedureParameters": {
+								"adf_instance": {
+									"value": {
+										"value": "@pipeline().DataFactory",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"created_by": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"created_date": {
+									"value": {
+										"value": "@utcnow()",
+										"type": "Expression"
+									},
+									"type": "DateTime"
+								},
+								"error_messages": {
+									"value": null,
+									"type": "String"
+								},
+								"execution_id": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"failed_asset_count": {
+									"value": null,
+									"type": "Int32"
+								},
+								"job_duration": {
+									"value": null,
+									"type": "TimeSpan"
+								},
+								"job_end_time": {
+									"value": null,
+									"type": "DateTime"
+								},
+								"job_start_time": {
+									"value": {
+										"value": "@utcnow()",
+										"type": "Expression"
+									},
+									"type": "DateTime"
+								},
+								"pipeline_name": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"processed_asset_count": {
+									"value": null,
+									"type": "Int32"
+								},
+								"project_name": {
+									"value": {
+										"value": "@pipeline().TriggerName",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"source_platform_name": {
+									"value": "Veeva Vault Promo Mats",
+									"type": "String"
+								},
+								"source_username": {
+									"value": "avirup.das@sb-viforpharma",
+									"type": "String"
+								},
+								"target_platform_name": {
+									"value": "Vifor VINCI MC",
+									"type": "String"
+								},
+								"target_username": {
+									"value": "avirup.das.external@viforpharma.com",
+									"type": "String"
+								},
+								"total_asset_count": {
+									"value": null,
+									"type": "Int32"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "SqlServer1",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "PL_002_Keyvault_MC_Reapproval",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "SP_add_batch_log",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "002_PL_MC_Reapproval_Keyvault",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"Execution_ID": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"folder": {
+					"name": "VVPM - VINCI MC Integration/4. Reapproval"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-06-28T06:57:00Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/002_PL_MC_Reapproval_Keyvault')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/003_PL_MC_Cancelled_Withdrawn_Master')]",
@@ -932,7 +3207,9 @@
 				"annotations": [],
 				"lastPublishTime": "2022-06-29T09:48:32Z"
 			},
-			"dependsOn": []
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/004_PL_MC_Cancelled_Withdrawn_Country')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/003_PL_MC_Draft_Get_VVPM_Doc_Details')]",
@@ -1343,7 +3620,9 @@
 				"annotations": [],
 				"lastPublishTime": "2022-06-29T09:44:45Z"
 			},
-			"dependsOn": []
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/004_PL_MC_Draft_Country')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/003_PL_MC_Expiry_Master')]",
@@ -1717,7 +3996,9 @@
 				"annotations": [],
 				"lastPublishTime": "2022-06-29T09:47:40Z"
 			},
-			"dependsOn": []
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/004_PL_MC_Expiry_Country')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/003_PL_MC_Expiry_Master1')]",
